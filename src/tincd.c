@@ -652,6 +652,25 @@ static bool drop_privs() {
 #endif
 
 int main(int argc, char **argv) {
+	int mode = FIPS_mode(), ret = 0; unsigned int err = 0;
+	printf("Current FIPS mode: %d\n", mode);
+
+	/* Toggle FIPS mode */
+	puts("Setting FIPS mode...");
+	ret = FIPS_mode_set(1 /*on*/);
+
+	if(ret != 1)
+	{
+		err = ERR_get_error();
+		printf("%d\n", err);
+		return 1;
+	}
+	else if(FIPS_mode())
+	{
+		puts("FIPS mode successfully set!");
+	}
+
+
 	program_name = argv[0];
 
 	if(!parse_options(argc, argv)) {
