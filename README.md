@@ -4,9 +4,13 @@ Born out of a need for FIPS-140-2 compliance, this fork simply calls `FIPS_mode_
 ## Installation
 #### Test Environment
 Date: 2017-10-12
+
 Operating System: CentOS Linux release 7.4.1708 (Core) 3.10.0-693.2.2.el7.x86_64 #1 SMP
+
 Tinc version: 1.0.32
+
 OpenSSL version: 1.0.2l
+
 OpenSSL FIPS Object Module version: 2.0.14
 
 #### Build/install Automake >= 1.14 (CentOS 7 doesn't have this version as of 2017-10-11)
@@ -61,7 +65,7 @@ make install
 ```
 
 
-Optional: Create symlinks for libcrypto and libssl
+#### Optional: Create symlinks for libcrypto and libssl
 ------------------------
 In case you didn't overwrite the default OpenSSL libraries, you'll probably want to create symlinks to the generated libraries, so you don't have to specify LD_LIBRARY_PATH every time you run `tincd`
 ```
