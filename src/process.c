@@ -32,6 +32,8 @@
 #include "subnet.h"
 #include "utils.h"
 #include "xalloc.h"
+#include <openssl/crypto.h>
+
 
 /* If zero, don't detach from the terminal. */
 bool do_detach = true;
@@ -357,8 +359,19 @@ bool detach(void) {
 
 	openlogger(identname, use_logfile ? LOGMODE_FILE : (do_detach ? LOGMODE_SYSLOG : LOGMODE_STDERR));
 
-	logger(LOG_NOTICE, "tincd %s starting, debug level %d",
+	logger(LOG_NOTICE, "tincd %s-fips starting, debug level %d",
 	       VERSION, debug_level);
+
+	if(FIPS_mode())
+	{
+		logger(LOG_DEBUG, "FIPS mode verified for child process");
+	}
+	else
+	{
+		logger(LOG_CRIT, "FIPS mode not set on child process!");
+		exit(2);
+	}
+
 
 	return true;
 }
