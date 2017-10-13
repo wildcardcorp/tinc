@@ -13,7 +13,7 @@ OpenSSL version: 1.0.2l
 
 OpenSSL FIPS Object Module version: 2.0.14
 
-#### Build/install Automake >= 1.14 (CentOS 7 doesn't have this version as of 2017-10-11)
+#### Build Automake >= 1.14 (CentOS 7 doesn't have this version as of 2017-10-11)
 ------------------------
 ```
 yum install -y perl autoconf automake libtool
@@ -52,14 +52,14 @@ make depend && make && make install
 
 #### Build FIPS-approved mode Tinc
 ------------------------
-`tincd` will be installed to `/usr/local/sbin`.
+`tincd` will be installed to `$prefix/sbin` and search for network configurations in `$prefix/etc/tinc`. `$prefix` is `/usr/local` by default and can be changed with `--prefix PATH`. Here I change it to `/`, so it will match the systemd service files.
 ```
 yum install -y git zlib-devel lzo-devel texinfo
 git clone https://github.com/wildcardcorp/tinc
 cd tinc
 autoconf --include m4 --force
 autoreconf --install
-./configure --with-openssl-lib=/usr/local/ssl/lib --with-openssl-include=/usr/local/ssl/include
+./configure --enable-jumbograms --prefix / --with-systemdsystemunitdir=/usr/lib/systemd/system --with-openssl-lib=/usr/local/ssl/lib --with-openssl-include=/usr/local/ssl/include
 make
 make install
 ```
@@ -67,11 +67,21 @@ make install
 
 #### Optional: Create symlinks for libcrypto and libssl
 ------------------------
-In case you didn't overwrite the default OpenSSL libraries, you'll probably want to create symlinks to the generated libraries, so you don't have to specify LD_LIBRARY_PATH every time you run `tincd`
+In case you didn't overwrite the default OpenSSL libraries, you'll probably want to create symlinks to the generated libraries, so you don't have to specify `LD_LIBRARY_PATH` every time you run `tincd`.
 ```
 ln -s /usr/local/ssl/lib/libcrypto.so.1.0.0 /usr/lib64/libcrypto.so.1.0.0
 ln -s /usr/local/ssl/lib/libssl.so.1.0.0 /usr/lib64/libssl.so.1.0.0
 ```
+
+
+#### Optional: Open ports on firewall
+------------------------
+tinc uses 655/tcp for its [meta-connection](https://www.tinc-vpn.org/documentation/The-meta_002dconnection.html) and 655/udp for the VPN connection.
+```
+firewall-cmd --add-port=655/tcp --add-port=655/udp --permanent
+firewall-cmd --reload
+```
+
 
 Example Output
 ------------------------
