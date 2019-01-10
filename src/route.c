@@ -581,7 +581,7 @@ static void fragment_ipv4_packet(node_t *dest, vpn_packet_t *packet, length_t et
 	ifdebug(TRAFFIC) logger(LOG_INFO, "Fragmenting packet of %d bytes to %s (%s)", packet->len, dest->name, dest->hostname);
 
 	offset = packet->data + ether_size + ip_size;
-	maxlen = (dest->mtu - ether_size - ip_size) & ~0x7;
+	maxlen = (MAX(dest->mtu, 590) - ether_size - ip_size) & ~0x7;
 	ip_off = ntohs(ip.ip_off);
 	origf = ip_off & ~IP_OFFMASK;
 	ip_off &= IP_OFFMASK;
@@ -632,11 +632,13 @@ static void route_ipv4_unicast(node_t *source, vpn_packet_t *packet) {
 	}
 
 	if(!subnet->owner->status.reachable) {
-		return route_ipv4_unreachable(source, packet, ether_size, ICMP_DEST_UNREACH, ICMP_NET_UNREACH);
+		route_ipv4_unreachable(source, packet, ether_size, ICMP_DEST_UNREACH, ICMP_NET_UNREACH);
+		return;
 	}
 
 	if(forwarding_mode == FMODE_OFF && source != myself && subnet->owner != myself) {
-		return route_ipv4_unreachable(source, packet, ether_size, ICMP_DEST_UNREACH, ICMP_NET_ANO);
+		route_ipv4_unreachable(source, packet, ether_size, ICMP_DEST_UNREACH, ICMP_NET_ANO);
+		return;
 	}
 
 	if(decrement_ttl && source != myself && subnet->owner != myself)
@@ -656,7 +658,8 @@ static void route_ipv4_unicast(node_t *source, vpn_packet_t *packet) {
 	}
 
 	if(directonly && subnet->owner != via) {
-		return route_ipv4_unreachable(source, packet, ether_size, ICMP_DEST_UNREACH, ICMP_NET_ANO);
+		route_ipv4_unreachable(source, packet, ether_size, ICMP_DEST_UNREACH, ICMP_NET_ANO);
+		return;
 	}
 
 	if(via && packet->len > MAX(via->mtu, 590) && via != myself) {
@@ -723,17 +726,20 @@ static void route_ipv6_unicast(node_t *source, vpn_packet_t *packet) {
 	}
 
 	if(!subnet->owner->status.reachable) {
-		return route_ipv6_unreachable(source, packet, ether_size, ICMP6_DST_UNREACH, ICMP6_DST_UNREACH_NOROUTE);
+		route_ipv6_unreachable(source, packet, ether_size, ICMP6_DST_UNREACH, ICMP6_DST_UNREACH_NOROUTE);
+		return;
 	}
 
 	if(forwarding_mode == FMODE_OFF && source != myself && subnet->owner != myself) {
-		return route_ipv6_unreachable(source, packet, ether_size, ICMP6_DST_UNREACH, ICMP6_DST_UNREACH_ADMIN);
+		route_ipv6_unreachable(source, packet, ether_size, ICMP6_DST_UNREACH, ICMP6_DST_UNREACH_ADMIN);
+		return;
 	}
 
-	if(decrement_ttl && source != myself && subnet->owner != myself)
+	if(decrement_ttl && source != myself && subnet->owner != myself) {
 		if(!do_decrement_ttl(source, packet)) {
 			return;
 		}
+	}
 
 	if(priorityinheritance) {
 		packet->priority = ((packet->data[14] & 0x0f) << 4) | (packet->data[15] >> 4);
@@ -747,7 +753,8 @@ static void route_ipv6_unicast(node_t *source, vpn_packet_t *packet) {
 	}
 
 	if(directonly && subnet->owner != via) {
-		return route_ipv6_unreachable(source, packet, ether_size, ICMP6_DST_UNREACH, ICMP6_DST_UNREACH_ADMIN);
+		route_ipv6_unreachable(source, packet, ether_size, ICMP6_DST_UNREACH, ICMP6_DST_UNREACH_ADMIN);
+		return;
 	}
 
 	if(via && packet->len > MAX(via->mtu, 1294) && via != myself) {
@@ -875,7 +882,7 @@ static void route_neighborsol(node_t *source, vpn_packet_t *packet) {
 	memcpy(packet->data, packet->data + ETH_ALEN, ETH_ALEN);        /* copy destination address */
 	packet->data[ETH_ALEN * 2 - 1] ^= 0xFF; /* mangle source address so it looks like it's not from us */
 
-	ip6.ip6_dst = ip6.ip6_src;                      /* swap destination and source protocoll address */
+	ip6.ip6_dst = ip6.ip6_src;                      /* swap destination and source protocol address */
 	ip6.ip6_src = ns.nd_ns_target;
 
 	if(has_opt) {

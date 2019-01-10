@@ -35,7 +35,7 @@ static int request_fd = -1;
 static int data_fd = -1;
 static int write_fd = -1;
 static int state = 0;
-static char *device_info;
+static const char *device_info = "UML network socket";
 
 extern char *identname;
 extern volatile bool running;
@@ -65,12 +65,10 @@ static bool setup_device(void) {
 	struct timeval tv;
 
 	if(!get_config_string(lookup_config(config_tree, "Device"), &device)) {
-		xasprintf(&device, LOCALSTATEDIR "/run/%s.umlsocket", identname);
+		xasprintf(&device, RUNSTATEDIR "/%s.umlsocket", identname);
 	}
 
 	get_config_string(lookup_config(config_tree, "Interface"), &iface);
-
-	device_info = "UML network socket";
 
 	if((write_fd = socket(PF_UNIX, SOCK_DGRAM, 0)) < 0) {
 		logger(LOG_ERR, "Could not open write %s: %s", device_info, strerror(errno));
@@ -183,10 +181,7 @@ void close_device(void) {
 	unlink(device);
 
 	free(device);
-
-	if(iface) {
-		free(iface);
-	}
+	free(iface);
 }
 
 static bool read_packet(vpn_packet_t *packet) {
@@ -237,7 +232,7 @@ static bool read_packet(vpn_packet_t *packet) {
 			return false;
 		}
 
-		if(connect(write_fd, &request.sock, sizeof(request.sock)) < 0) {
+		if(connect(write_fd, (struct sockaddr *)&request.sock, sizeof(request.sock)) < 0) {
 			logger(LOG_ERR, "Could not bind write %s: %s", device_info, strerror(errno));
 			running = false;
 			return false;
@@ -271,7 +266,7 @@ static bool read_packet(vpn_packet_t *packet) {
 	}
 
 	default:
-		logger(LOG_ERR, "Invalid value for state variable in " FILE);
+		logger(LOG_ERR, "Invalid value for state variable in " __FILE__);
 		abort();
 	}
 }

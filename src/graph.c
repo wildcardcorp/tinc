@@ -274,9 +274,9 @@ static void sssp_bfs(void) {
 				n->mtuevent = NULL;
 			}
 
-			xasprintf(&envp[0], "NETNAME=%s", netname ? : "");
-			xasprintf(&envp[1], "DEVICE=%s", device ? : "");
-			xasprintf(&envp[2], "INTERFACE=%s", iface ? : "");
+			xasprintf(&envp[0], "NETNAME=%s", netname ? netname : "");
+			xasprintf(&envp[1], "DEVICE=%s", device ? device : "");
+			xasprintf(&envp[2], "INTERFACE=%s", iface ? iface : "");
 			xasprintf(&envp[3], "NODE=%s", n->name);
 			sockaddr2str(&n->address, &address, &port);
 			xasprintf(&envp[4], "REMOTEADDRESS=%s", address);
@@ -360,13 +360,13 @@ void dump_graph(void) {
 	/* dump all nodes first */
 	for(node = node_tree->head; node; node = node->next) {
 		n = node->data;
-		fprintf(file, "	%s [label = \"%s\"];\n", n->name, n->name);
+		fprintf(file, "	\"%s\" [label = \"%s\"];\n", n->name, n->name);
 	}
 
 	/* now dump all edges */
 	for(node = edge_weight_tree->head; node; node = node->next) {
 		e = node->data;
-		fprintf(file, "	%s -> %s;\n", e->from->name, e->to->name);
+		fprintf(file, "	\"%s\" -> \"%s\";\n", e->from->name, e->to->name);
 	}
 
 	fprintf(file, "}\n");

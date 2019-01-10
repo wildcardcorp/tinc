@@ -1,7 +1,7 @@
 /*
     tincd.c -- the main file for tincd
     Copyright (C) 1998-2005 Ivo Timmermans
-                  2000-2017 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2018 Guus Sliepen <guus@tinc-vpn.org>
                   2008      Max Rijevski <maksuf@gmail.com>
                   2009      Michael Tokarev <mjt@tls.msk.ru>
                   2010      Julien Muchembled <jm@jmuchemb.eu>
@@ -37,7 +37,10 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
+#ifndef OPENSSL_NO_ENGINE
 #include <openssl/engine.h>
+#endif
+#include <openssl/bn.h>
 
 #ifdef HAVE_LZO
 #include LZO1X_H
@@ -363,6 +366,8 @@ static bool parse_options(int argc, char **argv) {
 /* This function prettyprints the key generation process */
 
 static int indicator(int a, int b, BN_GENCB *cb) {
+	(void)cb;
+
 	switch(a) {
 	case 0:
 		fprintf(stderr, ".");
@@ -432,7 +437,10 @@ static bool keygen(int bits) {
 	BN_GENCB_set(cb, indicator, NULL);
 
 	rsa_key = RSA_new();
-	BN_hex2bn(&e, "10001");
+
+	if(BN_hex2bn(&e, "10001") == 0) {
+		abort();
+	}
 
 	if(!rsa_key || !e) {
 		abort();
@@ -536,7 +544,7 @@ static void make_names(void) {
 #endif
 
 	if(!pidfilename) {
-		xasprintf(&pidfilename, LOCALSTATEDIR "/run/%s.pid", identname);
+		xasprintf(&pidfilename, RUNSTATEDIR "/%s.pid", identname);
 	}
 
 	if(!logfilename) {
@@ -557,25 +565,11 @@ static void make_names(void) {
 }
 
 static void free_names() {
-	if(identname) {
-		free(identname);
-	}
-
-	if(netname) {
-		free(netname);
-	}
-
-	if(pidfilename) {
-		free(pidfilename);
-	}
-
-	if(logfilename) {
-		free(logfilename);
-	}
-
-	if(confbase) {
-		free(confbase);
-	}
+	free(identname);
+	free(netname);
+	free(pidfilename);
+	free(logfilename);
+	free(confbase);
 }
 
 static bool drop_privs() {
@@ -660,7 +654,7 @@ int main(int argc, char **argv) {
 
 	if(show_version) {
 		printf("%s version %s\n", PACKAGE, VERSION);
-		printf("Copyright (C) 1998-2017 Ivo Timmermans, Guus Sliepen and others.\n"
+		printf("Copyright (C) 1998-2018 Ivo Timmermans, Guus Sliepen and others.\n"
 		       "See the AUTHORS file for a complete list.\n\n"
 		       "tinc comes with ABSOLUTELY NO WARRANTY.  This is free software,\n"
 		       "and you are welcome to redistribute it under certain conditions;\n"
@@ -715,14 +709,14 @@ int main(int argc, char **argv) {
 
 	init_configuration(&config_tree);
 
-	/* Slllluuuuuuurrrrp! */
-
-	RAND_load_file("/dev/urandom", 1024);
-
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE_load_builtin_engines();
 	ENGINE_register_all_complete();
+#endif
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	OpenSSL_add_all_algorithms();
+#endif
 
 	if(generate_keys) {
 		read_server_config();
@@ -841,9 +835,13 @@ end:
 
 	free(priority);
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	EVP_cleanup();
 	ERR_free_strings();
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
+#endif
+#endif
 
 	exit_configuration(&config_tree);
 	list_delete_list(cmdline_conf);

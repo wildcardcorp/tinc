@@ -27,6 +27,7 @@
 #include <openssl/rand.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/bn.h>
 
 #include "avl_tree.h"
 #include "conf.h"
@@ -76,7 +77,7 @@ bool read_rsa_public_key(connection_t *c) {
 	/* First, check for simple PublicKey statement */
 
 	if(get_config_string(lookup_config(c->config_tree, "PublicKey"), &key)) {
-		if(BN_hex2bn(&n, key) != strlen(key)) {
+		if((size_t)BN_hex2bn(&n, key) != strlen(key)) {
 			free(key);
 			logger(LOG_ERR, "Invalid PublicKey for %s!", c->name);
 			return false;
@@ -191,7 +192,7 @@ static bool read_rsa_private_key(void) {
 		myself->connection->rsa_key = RSA_new();
 
 //		RSA_blinding_on(myself->connection->rsa_key, NULL);
-		if(BN_hex2bn(&d, key) != strlen(key)) {
+		if((size_t)BN_hex2bn(&d, key) != strlen(key)) {
 			logger(LOG_ERR, "Invalid PrivateKey for myself!");
 			free(key);
 			return false;
@@ -205,7 +206,7 @@ static bool read_rsa_private_key(void) {
 			return false;
 		}
 
-		if(BN_hex2bn(&n, pubkey) != strlen(pubkey)) {
+		if((size_t)BN_hex2bn(&n, pubkey) != strlen(pubkey)) {
 			free(pubkey);
 			BN_free(d);
 			logger(LOG_ERR, "Invalid PublicKey for myself!");
@@ -388,7 +389,7 @@ static bool setup_myself(void) {
 	char *address = NULL;
 	char *proxy = NULL;
 	char *space;
-	char *envp[5] = {NULL};
+	char *envp[5] = {0};
 	struct addrinfo *ai, *aip, hint = {0};
 	bool choice;
 	int i, err;
@@ -588,7 +589,7 @@ static bool setup_myself(void) {
 		free(mode);
 	}
 
-	choice = true;
+	choice = !(myself->options & OPTION_TCPONLY);
 	get_config_bool(lookup_config(config_tree, "PMTUDiscovery"), &choice);
 
 	if(choice) {
@@ -852,9 +853,9 @@ static bool setup_myself(void) {
 	}
 
 	/* Run tinc-up script to further initialize the tap interface */
-	xasprintf(&envp[0], "NETNAME=%s", netname ? : "");
-	xasprintf(&envp[1], "DEVICE=%s", device ? : "");
-	xasprintf(&envp[2], "INTERFACE=%s", iface ? : "");
+	xasprintf(&envp[0], "NETNAME=%s", netname ? netname : "");
+	xasprintf(&envp[1], "DEVICE=%s", device ? device : "");
+	xasprintf(&envp[2], "INTERFACE=%s", iface ? iface : "");
 	xasprintf(&envp[3], "NAME=%s", myself->name);
 
 #ifdef HAVE_MINGW
@@ -1068,7 +1069,7 @@ bool setup_network(void) {
 void close_network_connections(void) {
 	avl_node_t *node, *next;
 	connection_t *c;
-	char *envp[5] = {NULL};
+	char *envp[5] = {0};
 	int i;
 
 	for(node = connection_tree->head; node; node = next) {
@@ -1099,9 +1100,9 @@ void close_network_connections(void) {
 		close(listen_socket[i].udp);
 	}
 
-	xasprintf(&envp[0], "NETNAME=%s", netname ? : "");
-	xasprintf(&envp[1], "DEVICE=%s", device ? : "");
-	xasprintf(&envp[2], "INTERFACE=%s", iface ? : "");
+	xasprintf(&envp[0], "NETNAME=%s", netname ? netname : "");
+	xasprintf(&envp[1], "DEVICE=%s", device ? device : "");
+	xasprintf(&envp[2], "INTERFACE=%s", iface ? iface : "");
 	xasprintf(&envp[3], "NAME=%s", myself->name);
 
 	exit_requests();

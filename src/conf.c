@@ -81,18 +81,9 @@ config_t *new_config(void) {
 }
 
 void free_config(config_t *cfg) {
-	if(cfg->variable) {
-		free(cfg->variable);
-	}
-
-	if(cfg->value) {
-		free(cfg->value);
-	}
-
-	if(cfg->file) {
-		free(cfg->file);
-	}
-
+	free(cfg->variable);
+	free(cfg->value);
+	free(cfg->file);
 	free(cfg);
 }
 
@@ -204,7 +195,7 @@ bool get_config_address(const config_t *cfg, struct addrinfo **result) {
 }
 
 bool get_config_subnet(const config_t *cfg, subnet_t **result) {
-	subnet_t subnet = {NULL};
+	subnet_t subnet = {0};
 
 	if(!cfg) {
 		return false;
@@ -432,7 +423,11 @@ bool read_server_config(void) {
 
 				// And we try to read the ones that end with ".conf"
 				if(l > 5 && !strcmp(".conf", & ep->d_name[ l - 5 ])) {
-					snprintf(fname, sizeof(fname), "%s/%s", dname, ep->d_name);
+					if((size_t)snprintf(fname, sizeof(fname), "%s/%s", dname, ep->d_name) >= sizeof(fname)) {
+						logger(LOG_ERR, "Pathname too long: %s/%s", dname, ep->d_name);
+						return false;
+					}
+
 					x = read_config_file(config_tree, fname);
 				}
 			}
@@ -573,7 +568,12 @@ FILE *ask_and_open(const char *filename, const char *what) {
 #endif
 		/* The directory is a relative path or a filename. */
 		getcwd(directory, sizeof(directory));
-		snprintf(abspath, sizeof(abspath), "%s/%s", directory, fn);
+
+		if((size_t)snprintf(abspath, sizeof(abspath), "%s/%s", directory, fn) >= sizeof(abspath)) {
+			fprintf(stderr, "Pathname too long: %s/%s\n", directory, fn);
+			return NULL;
+		}
+
 		fn = abspath;
 	}
 

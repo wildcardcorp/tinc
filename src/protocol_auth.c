@@ -60,7 +60,7 @@ bool id_h(connection_t *c) {
 
 	/* Check if identity is a valid name */
 
-	if(!check_id(name)) {
+	if(!check_id(name) || !strcmp(name, myself->name)) {
 		logger(LOG_ERR, "Got bad %s from %s (%s): %s", "ID", c->name,
 		       c->hostname, "invalid name");
 		return false;
@@ -96,6 +96,11 @@ bool id_h(connection_t *c) {
 		}
 
 		c->allow_request = ACK;
+
+		if(!c->outgoing) {
+			send_id(c);
+		}
+
 		return send_ack(c);
 	}
 
@@ -114,6 +119,10 @@ bool id_h(connection_t *c) {
 	}
 
 	c->allow_request = METAKEY;
+
+	if(!c->outgoing) {
+		send_id(c);
+	}
 
 	return send_metakey(c);
 }
@@ -239,7 +248,7 @@ bool metakey_h(connection_t *c) {
 
 	/* Check if the length of the meta key is all right */
 
-	if(strlen(buffer) != len * 2) {
+	if(strlen(buffer) != (size_t)len * 2) {
 		logger(LOG_ERR, "Possible intruder %s (%s): %s", c->name, c->hostname, "wrong keylength");
 		return false;
 	}
@@ -301,7 +310,8 @@ bool metakey_h(connection_t *c) {
 		c->inbudget = byte_budget(c->incipher);
 		c->status.decryptin = true;
 	} else {
-		c->incipher = NULL;
+		logger(LOG_ERR, "%s (%s) uses null cipher!", c->name, c->hostname);
+		return false;
 	}
 
 	c->inmaclength = maclength;
@@ -319,7 +329,8 @@ bool metakey_h(connection_t *c) {
 			return false;
 		}
 	} else {
-		c->indigest = NULL;
+		logger(LOG_ERR, "%s (%s) uses null digest!", c->name, c->hostname);
+		return false;
 	}
 
 	c->incompression = compression;
@@ -372,7 +383,7 @@ bool challenge_h(connection_t *c) {
 
 	/* Check if the length of the challenge is all right */
 
-	if(strlen(buffer) != len * 2) {
+	if(strlen(buffer) != (size_t)len * 2) {
 		logger(LOG_ERR, "Possible intruder %s (%s): %s", c->name,
 		       c->hostname, "wrong challenge length");
 		return false;
@@ -393,7 +404,11 @@ bool challenge_h(connection_t *c) {
 
 	/* Rest is done by send_chal_reply() */
 
-	return send_chal_reply(c);
+	if(c->outgoing) {
+		return send_chal_reply(c);
+	} else {
+		return true;
+	}
 }
 
 bool send_chal_reply(connection_t *c) {
@@ -442,7 +457,7 @@ bool chal_reply_h(connection_t *c) {
 
 	/* Check if the length of the hash is all right */
 
-	if(strlen(hishash) != EVP_MD_size(c->outdigest) * 2) {
+	if(strlen(hishash) != (size_t)EVP_MD_size(c->outdigest) * 2) {
 		logger(LOG_ERR, "Possible intruder %s (%s): %s", c->name,
 		       c->hostname, "wrong challenge reply length");
 		return false;
@@ -495,6 +510,10 @@ bool chal_reply_h(connection_t *c) {
 
 	c->allow_request = ACK;
 
+	if(!c->outgoing) {
+		send_chal_reply(c);
+	}
+
 	return send_ack(c);
 }
 
@@ -520,7 +539,7 @@ bool send_ack(connection_t *c) {
 		c->options |= OPTION_TCPONLY | OPTION_INDIRECT;
 	}
 
-	if(myself->options & OPTION_PMTU_DISCOVERY) {
+	if(myself->options & OPTION_PMTU_DISCOVERY && !(c->options & OPTION_TCPONLY)) {
 		c->options |= OPTION_PMTU_DISCOVERY;
 	}
 

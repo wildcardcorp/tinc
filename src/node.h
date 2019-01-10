@@ -27,12 +27,12 @@
 #include "subnet.h"
 
 typedef struct node_status_t {
-	unsigned int unused_active: 1;                  /* 1 if active (not used for nodes) */
-	unsigned int validkey: 1;                               /* 1 if we currently have a valid key for him */
-	unsigned int unused_waitingforkey: 1;           /* 1 if we already sent out a request */
-	unsigned int visited: 1;                        /* 1 if this node has been visited by one of the graph algorithms */
-	unsigned int reachable: 1;                      /* 1 if this node is reachable in the graph */
-	unsigned int indirect: 1;                               /* 1 if this node is not directly reachable by us */
+	unsigned int unused_active: 1;          /* 1 if active (not used for nodes) */
+	unsigned int validkey: 1;               /* 1 if we currently have a valid key for him */
+	unsigned int unused_waitingforkey: 1;   /* 1 if we already sent out a request */
+	unsigned int visited: 1;                /* 1 if this node has been visited by one of the graph algorithms */
+	unsigned int reachable: 1;              /* 1 if this node is reachable in the graph */
+	unsigned int indirect: 1;               /* 1 if this node is not directly reachable by us */
 	unsigned int unused: 26;
 } node_status_t;
 
@@ -95,12 +95,12 @@ extern avl_tree_t *node_udp_tree;
 extern void init_nodes(void);
 extern void exit_nodes(void);
 extern node_t *new_node(void) __attribute__((__malloc__));
-extern void free_node(node_t *);
-extern void node_add(node_t *);
-extern void node_del(node_t *);
-extern node_t *lookup_node(char *);
-extern node_t *lookup_node_udp(const sockaddr_t *);
-extern void update_node_udp(node_t *, const sockaddr_t *);
+extern void free_node(node_t *n);
+extern void node_add(node_t *n);
+extern void node_del(node_t *n);
+extern node_t *lookup_node(char *name);
+extern node_t *lookup_node_udp(const sockaddr_t *sa);
+extern void update_node_udp(node_t *n, const sockaddr_t *sa);
 extern void dump_nodes(void);
 
 #endif
